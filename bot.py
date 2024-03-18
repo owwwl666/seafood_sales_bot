@@ -1,41 +1,15 @@
 from io import BytesIO
-from urllib.parse import urljoin
 
 import redis
-import requests
 from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 
-
-def get_name_products() -> dict:
-    products = requests.get(
-        url="http://localhost:1337/api/products",
-        headers={"Authorization": f"bearer {env.str('STRAPI_TOKEN')}"}) \
-        .json()["data"]
-    return {product["id"]: product["attributes"]["title"] for product in products}
-
-
-def get_product_by_id(id: str) -> dict:
-    product = requests.get(
-        url=f"http://localhost:1337/api/products/{id}",
-        headers={"Authorization": f"bearer {env.str('STRAPI_TOKEN')}"},
-        params={"populate": "*"}) \
-        .json()["data"]["attributes"]
-    return product
-
-
-def download_product_image(product: dict) -> bytes:
-    image_url = urljoin(
-        "http://localhost:1337",
-        product["image"]["data"][0]["attributes"]["url"]
-    )
-    product_image = requests.get(image_url)
-    return product_image.content
+from strapi import get_name_products, get_product_by_id, download_product_image
 
 
 def start(update, context):
-    product_id_name = get_name_products()
+    product_id_name = get_name_products(strapi_token)
     keyboard = [[InlineKeyboardButton(product_id_name[id], callback_data=f"{id}")] for id in product_id_name]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -47,7 +21,7 @@ def start(update, context):
 
 
 def menu(update, context):
-    product_id_name = get_name_products()
+    product_id_name = get_name_products(strapi_token)
     keyboard = [[InlineKeyboardButton(product_id_name[id], callback_data=f"{id}")] for id in product_id_name]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -61,7 +35,7 @@ def menu(update, context):
 def display_information_product(update, context):
     product_id = update.callback_query.data
 
-    product = get_product_by_id(product_id)
+    product = get_product_by_id(product_id, strapi_token)
     product_image = download_product_image(product)
 
     back = [[InlineKeyboardButton("Назад", callback_data="back")]]
@@ -98,6 +72,8 @@ def handle_users_reply(update, context):
 if __name__ == "__main__":
     env = Env()
     env.read_env()
+
+    strapi_token = env.str("STRAPI_TOKEN")
 
     users_redis = redis.Redis(
         host=env.str("HOST", "localhost"),
