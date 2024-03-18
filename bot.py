@@ -8,31 +8,28 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 from strapi import get_name_products, get_product_by_id, download_product_image
 
 
-def start(update, context):
-    product_id_name = get_name_products(strapi_token)
-    keyboard = [[InlineKeyboardButton(product_id_name[id], callback_data=f"{id}")] for id in product_id_name]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(
-        "Выберите, что хотите заказать:",
-        reply_markup=reply_markup
-    )
-    return "HANDLE_MENU"
-
-
-def menu(update, context):
+def display_menu(update, context):
     product_id_name = get_name_products(strapi_token)
     keyboard = [[InlineKeyboardButton(product_id_name[id], callback_data=f"{id}")] for id in product_id_name]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.effective_chat.send_message(
-        text="Выберите, что хотите заказать:",
+        "Выберите, что хотите заказать:",
         reply_markup=reply_markup
     )
+
+
+def start(update, context):
+    display_menu(update, context)
     return "HANDLE_MENU"
 
 
-def display_information_product(update, context):
+def handle_menu(update, context):
+    display_menu(update, context)
+    return "HANDLE_DESCRIPTION"
+
+
+def handle_information_product(update, context):
     product_id = update.callback_query.data
 
     product = get_product_by_id(product_id, strapi_token)
@@ -47,14 +44,14 @@ def display_information_product(update, context):
         reply_markup=InlineKeyboardMarkup(back)
     )
 
-    return "HANDLE_DESCRIPTION"
+    return "HANDLE_MENU"
 
 
 def handle_users_reply(update, context):
     states = {
         "START": start,
-        "HANDLE_MENU": display_information_product,
-        "HANDLE_DESCRIPTION": menu
+        "HANDLE_MENU": handle_menu,
+        "HANDLE_DESCRIPTION": handle_information_product
     }
 
     if update.message:
@@ -64,9 +61,9 @@ def handle_users_reply(update, context):
     if update.callback_query:
         query = update.callback_query.data
         if query.isdigit():
-            states["HANDLE_MENU"](update, context)
-        elif query == "back":
             states["HANDLE_DESCRIPTION"](update, context)
+        elif query == "back":
+            states["HANDLE_MENU"](update, context)
 
 
 if __name__ == "__main__":
@@ -88,6 +85,6 @@ if __name__ == "__main__":
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
     dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CallbackQueryHandler(display_information_product))
-    dispatcher.add_handler(CallbackQueryHandler(menu))
+    dispatcher.add_handler(CallbackQueryHandler(handle_menu))
+    dispatcher.add_handler(CallbackQueryHandler(handle_information_product))
     updater.start_polling()
