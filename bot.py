@@ -5,7 +5,8 @@ from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 
-from strapi import get_name_products, get_product_by_id, download_product_image
+from strapi import get_name_products, get_product_by_id, download_product_image, save_product_in_cart_products, \
+    add_product_in_cart
 
 
 def display_menu(update, context):
@@ -35,13 +36,16 @@ def handle_information_product(update, context):
     product = get_product_by_id(product_id, strapi_token)
     product_image = download_product_image(product)
 
-    back = [[InlineKeyboardButton("Назад", callback_data="back")]]
+    keyboard = [
+        [InlineKeyboardButton("Назад", callback_data="back")],
+        [InlineKeyboardButton("Добавить в корзину", callback_data=f"cart_{product_id}")]
+    ]
 
     context.bot.sendPhoto(
         chat_id=update.effective_chat.id,
         photo=BytesIO(product_image),
         caption=product["description"],
-        reply_markup=InlineKeyboardMarkup(back)
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
     return "HANDLE_MENU"
@@ -64,6 +68,10 @@ def handle_users_reply(update, context):
             states["HANDLE_DESCRIPTION"](update, context)
         elif query == "back":
             states["HANDLE_MENU"](update, context)
+        elif query.startswith("cart_"):
+            product_id = query.split("_")[-1]
+            cart_product_id = save_product_in_cart_products(product_id, strapi_token)
+            add_product_in_cart(cart_product_id, update.effective_chat.id, strapi_token)
 
 
 if __name__ == "__main__":
