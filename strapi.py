@@ -27,3 +27,49 @@ def download_product_image(product: dict) -> bytes:
     )
     product_image = requests.get(image_url)
     return product_image.content
+
+
+def save_product_in_cart_products(id: str, strapi_token: str) -> int:
+    response = requests.post(
+        url="http://localhost:1337/api/cart-products",
+        headers={"Authorization": f"bearer {strapi_token}"},
+        json={
+            "data": {
+                "product": int(id)
+
+            }
+        }
+    ).json()
+    return response["data"]["id"]
+
+
+def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str):
+    user = requests.get(
+        url="http://localhost:1337/api/carts",
+        headers={"Authorization": f"bearer {strapi_token}"},
+        params={"filters[tg_id][$eq]": tg_id}
+    ).json()["data"]
+
+    if user:
+        user_id = user[0]["id"]
+        requests.put(
+            url=f"http://localhost:1337/api/carts/{user_id}",
+            headers={"Authorization": f"bearer {strapi_token}"},
+            json={
+                "data": {
+                    "cart_products": {"connect": [cart_product_id]}
+                }
+            }
+        )
+    else:
+        requests.post(
+            url=f"http://localhost:1337/api/carts",
+            headers={"Authorization": f"bearer {strapi_token}"},
+            json={
+                "data": {
+                    "tg_id": tg_id,
+                    "cart_products": cart_product_id
+
+                }
+            }
+        )
