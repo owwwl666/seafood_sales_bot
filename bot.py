@@ -11,7 +11,8 @@ from strapi import get_name_products, get_product_by_id, download_product_image,
 
 def display_menu(update, context):
     product_id_name = get_name_products(strapi_token)
-    keyboard = [[InlineKeyboardButton(product_id_name[id], callback_data=f"{id}")] for id in product_id_name]
+    keyboard = [[InlineKeyboardButton(product_id_name[product_id], callback_data=f"{product_id}")] for product_id in
+                product_id_name]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.effective_chat.send_message(

@@ -11,9 +11,9 @@ def get_name_products(strapi_token: str) -> dict:
     return {product["id"]: product["attributes"]["title"] for product in products}
 
 
-def get_product_by_id(id: str, strapi_token: str) -> dict:
+def get_product_by_id(product_id: str, strapi_token: str) -> dict:
     product = requests.get(
-        url=f"http://localhost:1337/api/products/{id}",
+        url=f"http://localhost:1337/api/products/{product_id}",
         headers={"Authorization": f"bearer {strapi_token}"},
         params={"populate": "*"}) \
         .json()["data"]["attributes"]
@@ -29,13 +29,13 @@ def download_product_image(product: dict) -> bytes:
     return product_image.content
 
 
-def save_product_in_cart_products(id: str, strapi_token: str) -> int:
+def save_product_in_cart_products(product_id: str, strapi_token: str) -> int:
     response = requests.post(
         url="http://localhost:1337/api/cart-products",
         headers={"Authorization": f"bearer {strapi_token}"},
         json={
             "data": {
-                "product": int(id)
+                "product": int(product_id)
 
             }
         }
