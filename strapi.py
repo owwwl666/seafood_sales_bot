@@ -73,3 +73,20 @@ def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str):
                 }
             }
         )
+
+
+def get_products_from_cart(tg_id: str, strapi_token: str) -> str:
+    response = requests.get(
+        url=f"http://localhost:1337/api/carts",
+        headers={"Authorization": f"bearer {strapi_token}"},
+        params={"filters[tg_id][$eq]": f"{tg_id}", "populate[cart_products][populate][0]": "product"},
+    ).json()
+
+    products = []
+    cart = response["data"][0]["attributes"]["cart_products"]["data"]
+
+    for product in cart:
+        product_title = product["attributes"]["product"]["data"]["attributes"]["title"]
+        products.append(product_title)
+
+    return "\n".join(products)
