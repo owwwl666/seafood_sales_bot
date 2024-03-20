@@ -1,6 +1,7 @@
 from io import BytesIO
 
 import redis
+import requests
 from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
@@ -55,16 +56,30 @@ def handle_information_product(update, context):
 
 def handle_cart(update, context):
     cart = get_products_from_cart(update.effective_chat.id, strapi_token)
-    update.effective_chat.send_message(
-        f"Ваша корзина:\n\n{cart}",
-    )
+
+    keyboard = [
+        [InlineKeyboardButton("В меню", callback_data="back")],
+        [InlineKeyboardButton("Очистить корзину", callback_data="clear_cart")]
+    ]
+
+    if cart:
+        update.effective_chat.send_message(
+            f"Ваша корзина:\n\n{cart}",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        update.effective_chat.send_message(
+            f"Ваша корзина пуста",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
 
 def handle_users_reply(update, context):
     states = {
         "START": start,
         "HANDLE_MENU": handle_menu,
-        "HANDLE_DESCRIPTION": handle_information_product
+        "HANDLE_DESCRIPTION": handle_information_product,
+        "HANDLE_CART": handle_cart
     }
 
     if update.message:
@@ -83,6 +98,22 @@ def handle_users_reply(update, context):
             add_product_in_cart(cart_product_id, update.effective_chat.id, strapi_token)
         elif query == "my_cart":
             handle_cart(update, context)
+        elif query == "clear_cart":
+            cart_id = requests.get(
+                url="http://localhost:1337/api/carts",
+                headers={"Authorization": f"bearer {strapi_token}"},
+                params={"filters[tg_id][$eq]": update.effective_chat.id}
+            ).json()["data"][0]["id"]
+
+            requests.put(
+                url=f"http://localhost:1337/api/carts/{cart_id}",
+                headers={"Authorization": f"bearer {strapi_token}"},
+                json={
+                    "data": {
+                        "cart_products": []
+                    }
+                }
+            )
 
 
 if __name__ == "__main__":
