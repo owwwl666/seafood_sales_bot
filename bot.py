@@ -72,6 +72,7 @@ def handle_cart(update, context):
             f"Ваша корзина пуста",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+    return "HANDLE_CART"
 
 
 def handle_users_reply(update, context):
