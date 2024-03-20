@@ -6,13 +6,13 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 
 from strapi import get_name_products, get_product_by_id, download_product_image, save_product_in_cart_products, \
-    add_product_in_cart
+    add_product_in_cart, get_products_from_cart
 
 
 def display_menu(update, context):
     product_id_name = get_name_products(strapi_token)
     keyboard = [[InlineKeyboardButton(product_id_name[product_id], callback_data=f"{product_id}")] for product_id in
-                product_id_name]
+                product_id_name] + [[InlineKeyboardButton("Моя корзина", callback_data="my_cart")]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.effective_chat.send_message(
@@ -39,7 +39,8 @@ def handle_information_product(update, context):
 
     keyboard = [
         [InlineKeyboardButton("Назад", callback_data="back")],
-        [InlineKeyboardButton("Добавить в корзину", callback_data=f"cart_{product_id}")]
+        [InlineKeyboardButton("Добавить в корзину", callback_data=f"cart_{product_id}")],
+        [InlineKeyboardButton("Моя корзина", callback_data="my_cart")]
     ]
 
     context.bot.sendPhoto(
@@ -50,6 +51,13 @@ def handle_information_product(update, context):
     )
 
     return "HANDLE_MENU"
+
+
+def handle_cart(update, context):
+    cart = get_products_from_cart(update.effective_chat.id, strapi_token)
+    update.effective_chat.send_message(
+        f"Ваша корзина:\n\n{cart}",
+    )
 
 
 def handle_users_reply(update, context):
@@ -73,6 +81,8 @@ def handle_users_reply(update, context):
             product_id = query.split("_")[-1]
             cart_product_id = save_product_in_cart_products(product_id, strapi_token)
             add_product_in_cart(cart_product_id, update.effective_chat.id, strapi_token)
+        elif query == "my_cart":
+            handle_cart(update, context)
 
 
 if __name__ == "__main__":
