@@ -63,11 +63,11 @@ def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str):
         )
     else:
         requests.post(
-            url=f"http://localhost:1337/api/carts",
+            url="http://localhost:1337/api/carts",
             headers={"Authorization": f"bearer {strapi_token}"},
             json={
                 "data": {
-                    "tg_id": tg_id,
+                    "tg_id": str(tg_id),
                     "cart_products": cart_product_id
 
                 }
@@ -77,7 +77,7 @@ def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str):
 
 def get_products_from_cart(tg_id: str, strapi_token: str) -> str:
     response = requests.get(
-        url=f"http://localhost:1337/api/carts",
+        url="http://localhost:1337/api/carts",
         headers={"Authorization": f"bearer {strapi_token}"},
         params={"filters[tg_id][$eq]": f"{tg_id}", "populate[cart_products][populate][0]": "product"},
     ).json()
