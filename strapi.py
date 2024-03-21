@@ -105,3 +105,15 @@ def clean_cart(strapi_token, chat_id, cart_redis):
             }
         }
     )
+
+
+def add_email(strapi_token, cart_id, email):
+    requests.put(
+        url=f"http://localhost:1337/api/carts/{cart_id}",
+        headers={"Authorization": f"bearer {strapi_token}"},
+        json={
+            "data": {
+                "email": email
+            }
+        }
+    )
