@@ -1,13 +1,12 @@
 from io import BytesIO
 
 import redis
-import requests
 from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 
 from strapi import get_name_products, get_product_by_id, download_product_image, save_product_in_cart_products, \
-    add_product_in_cart, get_products_from_cart
+    add_product_in_cart, get_products_from_cart, clean_cart
 
 
 def display_menu(update, context):
@@ -59,7 +58,7 @@ def handle_cart(update, context):
 
     keyboard = [
         [InlineKeyboardButton("В меню", callback_data="back")],
-        [InlineKeyboardButton("Очистить корзину", callback_data="clear_cart")]
+        [InlineKeyboardButton("Очистить корзину", callback_data="clean_cart")]
     ]
 
     if cart:
@@ -96,25 +95,11 @@ def handle_users_reply(update, context):
         elif query.startswith("cart_"):
             product_id = query.split("_")[-1]
             cart_product_id = save_product_in_cart_products(product_id, strapi_token)
-            add_product_in_cart(cart_product_id, update.effective_chat.id, strapi_token)
+            add_product_in_cart(cart_product_id, update.effective_chat.id, strapi_token, cart_redis)
         elif query == "my_cart":
             handle_cart(update, context)
-        elif query == "clear_cart":
-            cart_id = requests.get(
-                url="http://localhost:1337/api/carts",
-                headers={"Authorization": f"bearer {strapi_token}"},
-                params={"filters[tg_id][$eq]": update.effective_chat.id}
-            ).json()["data"][0]["id"]
-
-            requests.put(
-                url=f"http://localhost:1337/api/carts/{cart_id}",
-                headers={"Authorization": f"bearer {strapi_token}"},
-                json={
-                    "data": {
-                        "cart_products": []
-                    }
-                }
-            )
+        elif query == "clean_cart":
+            clean_cart(strapi_token, update.effective_chat.id, cart_redis)
 
 
 if __name__ == "__main__":
@@ -127,6 +112,14 @@ if __name__ == "__main__":
         host=env.str("HOST", "localhost"),
         port=env.int("PORT", 6379),
         db=env.int("USERS_DB", 1),
+        password=env.int("USERS_DB_PASSWORD", None),
+        decode_responses=True,
+    )
+
+    cart_redis = redis.Redis(
+        host=env.str("HOST", "localhost"),
+        port=env.int("PORT", 6379),
+        db=env.int("USERS_DB", 2),
         password=env.int("USERS_DB_PASSWORD", None),
         decode_responses=True,
     )

@@ -43,7 +43,7 @@ def save_product_in_cart_products(product_id: str, strapi_token: str) -> int:
     return response["data"]["id"]
 
 
-def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str):
+def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str, cart_redis):
     user = requests.get(
         url="http://localhost:1337/api/carts",
         headers={"Authorization": f"bearer {strapi_token}"},
@@ -62,7 +62,7 @@ def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str):
             }
         )
     else:
-        requests.post(
+        cart = requests.post(
             url="http://localhost:1337/api/carts",
             headers={"Authorization": f"bearer {strapi_token}"},
             json={
@@ -73,6 +73,7 @@ def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str):
                 }
             }
         )
+        cart_redis.set(tg_id, cart.json()["data"]["id"])
 
 
 def get_products_from_cart(tg_id: str, strapi_token: str) -> str:
@@ -90,3 +91,17 @@ def get_products_from_cart(tg_id: str, strapi_token: str) -> str:
         products.append(product_title)
 
     return "\n".join(products)
+
+
+def clean_cart(strapi_token, chat_id, cart_redis):
+    cart_id = cart_redis.get(chat_id)
+
+    requests.put(
+        url=f"http://localhost:1337/api/carts/{cart_id}",
+        headers={"Authorization": f"bearer {strapi_token}"},
+        json={
+            "data": {
+                "cart_products": []
+            }
+        }
+    )
