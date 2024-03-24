@@ -11,7 +11,7 @@ from strapi import get_name_products, get_product_by_id, download_product_image,
 
 
 def display_menu(update, context):
-    products = get_name_products(strapi_token)
+    products = get_name_products(headers)
     update.effective_chat.send_message(
         "Выберите, что хотите заказать:",
         reply_markup=menu_keyboard(products)
@@ -31,7 +31,7 @@ def handle_menu(update, context):
 def handle_description_product(update, context):
     product_id = update.callback_query.data.split('_')[-1]
 
-    product = get_product_by_id(product_id, strapi_token)
+    product = get_product_by_id(product_id, headers)
     product_image = download_product_image(product)
 
     context.bot.sendPhoto(
@@ -45,7 +45,7 @@ def handle_description_product(update, context):
 
 
 def handle_cart(update, context):
-    cart = get_products_from_cart(update.effective_chat.id, strapi_token)
+    cart = get_products_from_cart(update.effective_chat.id, headers)
 
     if cart:
         update.effective_chat.send_message(
@@ -107,12 +107,12 @@ def handle_users_reply(update, context):
     elif user_reply == "pay":
         current_state = "HANDLE_PAYMENT"
     elif user_reply == "clean_cart":
-        clean_cart(strapi_token, update.effective_chat.id, carts_redis)
+        clean_cart(headers, chat_id, carts_redis)
         current_state = "HANDLE_CART"
     elif user_reply.startswith("cart_"):
         product_id = user_reply.split("_")[-1]
-        cart_product_id = save_product_in_cart_products(product_id, strapi_token)
-        add_product_in_cart(cart_product_id, update.effective_chat.id, strapi_token, carts_redis)
+        cart_product_id = save_product_in_cart_products(product_id, headers)
+        add_product_in_cart(cart_product_id, chat_id, headers, carts_redis)
         current_state = "HANDLE_CART"
 
     try:
@@ -143,6 +143,8 @@ if __name__ == "__main__":
     )
 
     strapi_token = env.str("STRAPI_TOKEN")
+    headers = {"Authorization": f"bearer {strapi_token}"}
+
     bot_token = env.str("TELEGRAM_BOT_TOKEN")
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
