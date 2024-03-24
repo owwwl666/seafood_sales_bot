@@ -85,7 +85,7 @@ def get_products_from_cart(tg_id: str, strapi_token: str) -> str | None:
         ).json()
 
         products = []
-        cart = response.get["data"][0]["attributes"]["cart_products"]["data"]
+        cart = response["data"][0]["attributes"]["cart_products"]["data"]
 
         for product in cart:
             product_title = product["attributes"]["product"]["data"]["attributes"]["title"]
