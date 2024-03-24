@@ -7,10 +7,11 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageH
 
 from keyboards import menu_keyboard, product_description_keyboard, cart_keyboard
 from strapi import get_name_products, get_product_by_id, download_product_image, get_products_from_cart, add_email, \
-    clean_cart, save_product_in_cart_products, add_product_in_cart
+    clean_cart, save_product_in_cart_products, add_product_in_cart, get_product_image
 
 
 def display_menu(update, context):
+    """Показывает меню магазина."""
     products = get_name_products(headers)
     update.effective_chat.send_message(
         "Выберите, что хотите заказать:",
@@ -19,20 +20,23 @@ def display_menu(update, context):
 
 
 def start(update, context):
+    """Команда запуска бота /start."""
     display_menu(update, context)
     return "HANDLE_MENU"
 
 
 def handle_menu(update, context):
+    """Меню магазина."""
     display_menu(update, context)
     return "HANDLE_DESCRIPTION"
 
 
 def handle_description_product(update, context):
+    """Описание выбранного пользователем продукта из меню."""
     product_id = update.callback_query.data.split('_')[-1]
 
     product = get_product_by_id(product_id, headers)
-    product_image = download_product_image(product)
+    product_image = get_product_image(product)
 
     context.bot.sendPhoto(
         chat_id=update.effective_chat.id,
@@ -45,6 +49,7 @@ def handle_description_product(update, context):
 
 
 def handle_cart(update, context):
+    """Корзина пользователя с продуктами."""
     cart = get_products_from_cart(update.effective_chat.id, headers)
 
     if cart:
@@ -61,11 +66,13 @@ def handle_cart(update, context):
 
 
 def handle_payment(update, context):
+    """Ввод электронной почты пользователем для подтверждения оплаты."""
     update.effective_chat.send_message("Введите Вашу электронную почту и мы свяжемся с Вами!")
     return "WAITING_EMAIL"
 
 
 def handle_email(update, context):
+    """Проверка электронной почты на валидность."""
     email = update.message.text
     if validate(email):
         cart_id = carts_redis.get(update.effective_chat.id)
@@ -78,6 +85,15 @@ def handle_email(update, context):
 
 
 def handle_users_reply(update, context):
+    """
+    Функция, которая запускается при любом сообщении от пользователя и решает как его обработать.
+    Эта функция запускается в ответ на эти действия пользователя:
+        * Нажатие на inline-кнопку в боте
+        * Отправка сообщения боту
+        * Отправка команды боту
+    Она получает стейт пользователя из базы данных и запускает соответствующую функцию-обработчик (хэндлер).
+    Функция-обработчик возвращает следующее состояние, которое записывается в базу данных.
+    """
     states = {
         "START": start,
         "HANDLE_MENU": handle_menu,

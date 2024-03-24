@@ -4,6 +4,7 @@ import requests
 
 
 def get_name_products(headers: dict) -> dict:
+    """Возвращает dict с ключом - id продукта и значением - название продукта."""
     products = requests.get(
         url="http://localhost:1337/api/products",
         headers=headers) \
@@ -12,6 +13,7 @@ def get_name_products(headers: dict) -> dict:
 
 
 def get_product_by_id(product_id: str, headers: dict) -> dict:
+    """Получает продукт по его id в БД Strapi."""
     product = requests.get(
         url=f"http://localhost:1337/api/products/{product_id}",
         headers=headers,
@@ -20,7 +22,8 @@ def get_product_by_id(product_id: str, headers: dict) -> dict:
     return product
 
 
-def download_product_image(product: dict) -> bytes:
+def get_product_image(product: dict) -> bytes:
+    """Получает изображение продукта по его url."""
     image_url = urljoin(
         "http://localhost:1337",
         product["image"]["data"][0]["attributes"]["url"]
@@ -30,6 +33,9 @@ def download_product_image(product: dict) -> bytes:
 
 
 def save_product_in_cart_products(product_id: str, headers: dict) -> int:
+    """Сохраняет продукт в промежуточную БД CartProduct в Strapi.
+
+    Возвращает его id."""
     response = requests.post(
         url="http://localhost:1337/api/cart-products",
         headers=headers,
@@ -44,6 +50,10 @@ def save_product_in_cart_products(product_id: str, headers: dict) -> int:
 
 
 def add_product_in_cart(cart_product_id: int, tg_id: str, headers: dict, cart_redis):
+    """Добавляет продукт в корзину пользователя.
+
+    Если пользователь существует, то обновляет его корзину.
+    Иначе, создает нового пользователя с выбранным продуктом в БД."""
     user = requests.get(
         url="http://localhost:1337/api/carts",
         headers=headers,
@@ -77,6 +87,7 @@ def add_product_in_cart(cart_product_id: int, tg_id: str, headers: dict, cart_re
 
 
 def get_products_from_cart(tg_id: str, headers: dict) -> str | None:
+    """Получает все продукты из корзины пользователя."""
     try:
         response = requests.get(
             url="http://localhost:1337/api/carts",
@@ -96,6 +107,7 @@ def get_products_from_cart(tg_id: str, headers: dict) -> str | None:
 
 
 def clean_cart(headers: dict, chat_id, cart_redis):
+    """Очищает корзину пользователя."""
     cart_id = cart_redis.get(chat_id)
 
     requests.put(
@@ -110,6 +122,7 @@ def clean_cart(headers: dict, chat_id, cart_redis):
 
 
 def add_email(strapi_token, cart_id, email):
+    """Добавляет в БД, введенный пользователем email."""
     requests.put(
         url=f"http://localhost:1337/api/carts/{cart_id}",
         headers={"Authorization": f"bearer {strapi_token}"},
