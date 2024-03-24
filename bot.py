@@ -47,8 +47,6 @@ def handle_description_product(update, context):
 def handle_cart(update, context):
     cart = get_products_from_cart(update.effective_chat.id, strapi_token)
 
-    print(cart)
-
     if cart:
         update.effective_chat.send_message(
             f"Ваша корзина:\n\n{cart}",
@@ -118,11 +116,8 @@ def handle_users_reply(update, context):
         current_state = "HANDLE_CART"
 
     try:
-        print(current_state)
         next_state = states[current_state](update, context)
         users_redis.set(chat_id, next_state)
-        # print(users_redis.get(chat_id))
-        print(carts_redis.get(chat_id))
     except Exception as err:
         print(err)
 
@@ -148,7 +143,6 @@ if __name__ == "__main__":
     )
 
     strapi_token = env.str("STRAPI_TOKEN")
-
     bot_token = env.str("TELEGRAM_BOT_TOKEN")
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
