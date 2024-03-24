@@ -76,21 +76,23 @@ def add_product_in_cart(cart_product_id: int, tg_id: str, strapi_token: str, car
         cart_redis.set(tg_id, cart.json()["data"]["id"])
 
 
-def get_products_from_cart(tg_id: str, strapi_token: str) -> str:
-    response = requests.get(
-        url="http://localhost:1337/api/carts",
-        headers={"Authorization": f"bearer {strapi_token}"},
-        params={"filters[tg_id][$eq]": f"{tg_id}", "populate[cart_products][populate][0]": "product"},
-    ).json()
+def get_products_from_cart(tg_id: str, strapi_token: str) -> str | None:
+    try:
+        response = requests.get(
+            url="http://localhost:1337/api/carts",
+            headers={"Authorization": f"bearer {strapi_token}"},
+            params={"filters[tg_id][$eq]": f"{tg_id}", "populate[cart_products][populate][0]": "product"},
+        ).json()
 
-    products = []
-    cart = response["data"][0]["attributes"]["cart_products"]["data"]
+        products = []
+        cart = response.get["data"][0]["attributes"]["cart_products"]["data"]
 
-    for product in cart:
-        product_title = product["attributes"]["product"]["data"]["attributes"]["title"]
-        products.append(product_title)
-
-    return "\n".join(products)
+        for product in cart:
+            product_title = product["attributes"]["product"]["data"]["attributes"]["title"]
+            products.append(product_title)
+        return "\n".join(products)
+    except:
+        return None
 
 
 def clean_cart(strapi_token, chat_id, cart_redis):
