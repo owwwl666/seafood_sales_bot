@@ -3,28 +3,22 @@ from io import BytesIO
 import redis
 from email_validate import validate
 from environs import Env
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
+from keyboards import menu_keyboard, product_description_keyboard, cart_keyboard
 from strapi import get_name_products, get_product_by_id, download_product_image, get_products_from_cart, add_email, \
     clean_cart, save_product_in_cart_products, add_product_in_cart
 
 
 def display_menu(update, context):
-    product_id_name = get_name_products(strapi_token)
-    keyboard = [[InlineKeyboardButton(product_id_name[product_id], callback_data=f"product_{product_id}")] for
-                product_id in
-                product_id_name] + [[InlineKeyboardButton("Моя корзина", callback_data="my_cart")]]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    products = get_name_products(strapi_token)
     update.effective_chat.send_message(
         "Выберите, что хотите заказать:",
-        reply_markup=reply_markup
+        reply_markup=menu_keyboard(products)
     )
 
 
 def start(update, context):
-    update.message.reply_text(text='Привет!')
     display_menu(update, context)
     return "HANDLE_MENU"
 
@@ -40,17 +34,11 @@ def handle_description_product(update, context):
     product = get_product_by_id(product_id, strapi_token)
     product_image = download_product_image(product)
 
-    keyboard = [
-        [InlineKeyboardButton("В меню", callback_data="menu")],
-        [InlineKeyboardButton("Добавить в корзину", callback_data=f"cart_{product_id}")],
-        [InlineKeyboardButton("Моя корзина", callback_data="my_cart")]
-    ]
-
     context.bot.sendPhoto(
         chat_id=update.effective_chat.id,
         photo=BytesIO(product_image),
         caption=product["description"],
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=product_description_keyboard(product_id)
     )
 
     return "HANDLE_MENU"
@@ -59,21 +47,17 @@ def handle_description_product(update, context):
 def handle_cart(update, context):
     cart = get_products_from_cart(update.effective_chat.id, strapi_token)
 
-    keyboard = [
-        [InlineKeyboardButton("В меню", callback_data="menu")],
-        [InlineKeyboardButton("Очистить корзину", callback_data="clean_cart")],
-        [InlineKeyboardButton("Оплатить", callback_data="pay")]
-    ]
+    print(cart)
 
     if cart:
         update.effective_chat.send_message(
             f"Ваша корзина:\n\n{cart}",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=cart_keyboard()
         )
     else:
         update.effective_chat.send_message(
             f"Ваша корзина пуста",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=cart_keyboard()
         )
     return "HANDLE_MENU"
 
@@ -134,8 +118,11 @@ def handle_users_reply(update, context):
         current_state = "HANDLE_CART"
 
     try:
+        print(current_state)
         next_state = states[current_state](update, context)
         users_redis.set(chat_id, next_state)
+        # print(users_redis.get(chat_id))
+        print(carts_redis.get(chat_id))
     except Exception as err:
         print(err)
 
@@ -143,8 +130,6 @@ def handle_users_reply(update, context):
 if __name__ == "__main__":
     env = Env()
     env.read_env()
-
-    strapi_token = env.str("STRAPI_TOKEN")
 
     users_redis = redis.Redis(
         host=env.str("HOST", "localhost"),
@@ -161,6 +146,8 @@ if __name__ == "__main__":
         password=env.int("USERS_DB_PASSWORD", None),
         decode_responses=True,
     )
+
+    strapi_token = env.str("STRAPI_TOKEN")
 
     bot_token = env.str("TELEGRAM_BOT_TOKEN")
     updater = Updater(bot_token)
