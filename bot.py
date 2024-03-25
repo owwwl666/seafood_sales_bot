@@ -5,29 +5,28 @@ from email_validate import validate
 from environs import Env
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
-from keyboards import menu_keyboard, product_description_keyboard, cart_keyboard
-from strapi import get_name_products, get_product_by_id, download_product_image, get_products_from_cart, add_email, \
-    clean_cart, save_product_in_cart_products, add_product_in_cart, get_product_image
-
-
-def display_menu(update, context):
-    """Показывает меню магазина."""
-    products = get_name_products(headers)
-    update.effective_chat.send_message(
-        "Выберите, что хотите заказать:",
-        reply_markup=menu_keyboard(products)
-    )
+from keyboards import menu_keyboard, product_description_keyboard, cart_keyboard, start_keyboard
+from strapi import get_name_products, get_product_by_id, get_products_from_cart, add_email, \
+    clean_cart, save_product_in_cart_products, add_product_in_cart, get_product_image, add_new_user
 
 
 def start(update, context):
     """Команда запуска бота /start."""
-    display_menu(update, context)
+    add_new_user(update.effective_chat.id, headers, carts_redis)
+    update.message.reply_text(
+        "Добро пожаловать в рай морепродуктов!\n\nПерейдите в меню и насладитесь любовью российских морей!",
+        reply_markup=start_keyboard()
+    )
     return "HANDLE_MENU"
 
 
 def handle_menu(update, context):
     """Меню магазина."""
-    display_menu(update, context)
+    products = get_name_products(headers)
+    update.effective_chat.send_message(
+        "Выберите, что хотите заказать:",
+        reply_markup=menu_keyboard(products)
+    )
     return "HANDLE_DESCRIPTION"
 
 
