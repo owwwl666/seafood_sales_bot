@@ -7,7 +7,7 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageH
 
 from keyboards import menu_keyboard, product_description_keyboard, cart_keyboard, start_keyboard
 from strapi import get_name_products, get_product_by_id, get_products_from_cart, add_email, \
-    clean_cart, save_product_in_cart_products, add_product_in_cart, get_product_image, add_new_user
+    clean_cart, add_product_in_cart, get_product_image, add_new_user
 
 
 def start(update, context):
@@ -126,8 +126,7 @@ def handle_users_reply(update, context):
         current_state = "HANDLE_CART"
     elif user_reply.startswith("cart_"):
         product_id = user_reply.split("_")[-1]
-        cart_product_id = save_product_in_cart_products(product_id, headers)
-        add_product_in_cart(cart_product_id, chat_id, headers, carts_redis)
+        add_product_in_cart(product_id, chat_id, headers, carts_redis)
         current_state = "HANDLE_CART"
 
     try:

@@ -47,11 +47,11 @@ def add_new_user(tg_id: str, headers: dict, cart_redis):
         cart_redis.set(tg_id, response.json()["data"]["id"])
 
 
-def save_product_in_cart_products(product_id: str, headers: dict) -> int:
-    """Сохраняет продукт в промежуточную БД CartProduct в Strapi.
+def add_product_in_cart(product_id: int, tg_id: str, headers: dict, cart_redis):
+    """Добавляет продукт в корзину пользователя."""
+    cart_id = cart_redis.get(tg_id)
 
-    Возвращает его id."""
-    response = requests.post(
+    cart_product_id = requests.post(
         url="http://localhost:1337/api/cart-products",
         headers=headers,
         json={
@@ -60,13 +60,7 @@ def save_product_in_cart_products(product_id: str, headers: dict) -> int:
 
             }
         }
-    ).json()
-    return response["data"]["id"]
-
-
-def add_product_in_cart(cart_product_id: int, tg_id: str, headers: dict, cart_redis):
-    """Добавляет продукт в корзину пользователя."""
-    cart_id = cart_redis.get(tg_id)
+    ).json()["data"]["id"]
 
     requests.put(
         url=f"http://localhost:1337/api/carts/{cart_id}",
