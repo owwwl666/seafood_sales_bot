@@ -47,7 +47,7 @@ def add_new_user(tg_id: str, headers: dict, cart_redis):
         cart_redis.set(tg_id, response.json()["data"]["id"])
 
 
-def add_product_in_cart(product_id: int, tg_id: str, headers: dict, cart_redis):
+def add_product_in_cart(product_id: str, tg_id: str, headers: dict, cart_redis):
     """Добавляет продукт в корзину пользователя."""
     cart_id = cart_redis.get(tg_id)
 
