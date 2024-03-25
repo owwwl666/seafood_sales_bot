@@ -32,6 +32,21 @@ def get_product_image(product: dict) -> bytes:
     return product_image.content
 
 
+def add_new_user(tg_id: str, headers: dict, cart_redis):
+    """Добавляет нового пользователя в хранилище Cart."""
+    if cart_redis.get(tg_id) is None:
+        response = requests.post(
+            url="http://localhost:1337/api/carts",
+            headers=headers,
+            json={
+                "data": {
+                    "tg_id": str(tg_id)
+                }
+            }
+        )
+        cart_redis.set(tg_id, response.json()["data"]["id"])
+
+
 def save_product_in_cart_products(product_id: str, headers: dict) -> int:
     """Сохраняет продукт в промежуточную БД CartProduct в Strapi.
 
@@ -50,60 +65,35 @@ def save_product_in_cart_products(product_id: str, headers: dict) -> int:
 
 
 def add_product_in_cart(cart_product_id: int, tg_id: str, headers: dict, cart_redis):
-    """Добавляет продукт в корзину пользователя.
+    """Добавляет продукт в корзину пользователя."""
+    cart_id = cart_redis.get(tg_id)
 
-    Если пользователь существует, то обновляет его корзину.
-    Иначе, создает нового пользователя с выбранным продуктом в БД."""
-    user = requests.get(
-        url="http://localhost:1337/api/carts",
+    requests.put(
+        url=f"http://localhost:1337/api/carts/{cart_id}",
         headers=headers,
-        params={"filters[tg_id][$eq]": tg_id}
-    ).json()["data"]
-
-    if user:
-        user_id = user[0]["id"]
-        requests.put(
-            url=f"http://localhost:1337/api/carts/{user_id}",
-            headers=headers,
-            json={
-                "data": {
-                    "cart_products": {"connect": [cart_product_id]}
-                }
+        json={
+            "data": {
+                "cart_products": {"connect": [cart_product_id]}
             }
-        )
-    else:
-        cart = requests.post(
-            url="http://localhost:1337/api/carts",
-            headers=headers,
-            json={
-                "data": {
-                    "tg_id": str(tg_id),
-                    "cart_products": cart_product_id
-
-                }
-            }
-        )
-        cart_redis.set(tg_id, cart.json()["data"]["id"])
+        }
+    )
 
 
 def get_products_from_cart(tg_id: str, headers: dict) -> str | None:
     """Получает все продукты из корзины пользователя."""
-    try:
-        response = requests.get(
-            url="http://localhost:1337/api/carts",
-            headers=headers,
-            params={"filters[tg_id][$eq]": f"{tg_id}", "populate[cart_products][populate][0]": "product"},
-        ).json()
+    response = requests.get(
+        url="http://localhost:1337/api/carts",
+        headers=headers,
+        params={"filters[tg_id][$eq]": f"{tg_id}", "populate[cart_products][populate][0]": "product"},
+    ).json()
 
-        products = []
-        cart = response["data"][0]["attributes"]["cart_products"]["data"]
+    products = []
+    cart = response["data"][0]["attributes"]["cart_products"]["data"]
 
-        for product in cart:
-            product_title = product["attributes"]["product"]["data"]["attributes"]["title"]
-            products.append(product_title)
-        return "\n".join(products)
-    except:
-        return None
+    for product in cart:
+        product_title = product["attributes"]["product"]["data"]["attributes"]["title"]
+        products.append(product_title)
+    return "\n".join(products)
 
 
 def clean_cart(headers: dict, chat_id, cart_redis):
