@@ -3,11 +3,30 @@ from io import BytesIO
 import redis
 from email_validate import validate
 from environs import Env
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    Filters,
+)
 
-from keyboards import menu_keyboard, product_description_keyboard, cart_keyboard, start_keyboard
-from strapi import get_name_products, get_product_by_id, get_products_from_cart, add_email, \
-    clean_cart, add_product_in_cart, get_product_image, add_new_user
+from keyboards import (
+    menu_keyboard,
+    product_description_keyboard,
+    cart_keyboard,
+    start_keyboard,
+)
+from strapi import (
+    get_name_products,
+    get_product_by_id,
+    get_products_from_cart,
+    add_email,
+    clean_cart,
+    add_product_in_cart,
+    get_product_image,
+    add_new_user,
+)
 
 
 def start(update, context):
@@ -15,7 +34,7 @@ def start(update, context):
     add_new_user(update.effective_chat.id, headers, carts_redis)
     update.message.reply_text(
         "Добро пожаловать в рай морепродуктов!\n\nПерейдите в меню и насладитесь любовью российских морей!",
-        reply_markup=start_keyboard()
+        reply_markup=start_keyboard(),
     )
     return "HANDLE_MENU"
 
@@ -24,15 +43,14 @@ def handle_menu(update, context):
     """Меню магазина."""
     products = get_name_products(headers)
     update.effective_chat.send_message(
-        "Выберите, что хотите заказать:",
-        reply_markup=menu_keyboard(products)
+        "Выберите, что хотите заказать:", reply_markup=menu_keyboard(products)
     )
     return "HANDLE_DESCRIPTION"
 
 
 def handle_description_product(update, context):
     """Описание выбранного пользователем продукта из меню."""
-    product_id = update.callback_query.data.split('_')[-1]
+    product_id = update.callback_query.data.split("_")[-1]
 
     product = get_product_by_id(product_id, headers)
     product_image = get_product_image(product)
@@ -41,7 +59,7 @@ def handle_description_product(update, context):
         chat_id=update.effective_chat.id,
         photo=BytesIO(product_image),
         caption=product["description"],
-        reply_markup=product_description_keyboard(product_id)
+        reply_markup=product_description_keyboard(product_id),
     )
 
     return "HANDLE_MENU"
@@ -53,20 +71,20 @@ def handle_cart(update, context):
 
     if cart:
         update.effective_chat.send_message(
-            f"Ваша корзина:\n\n{cart}",
-            reply_markup=cart_keyboard()
+            f"Ваша корзина:\n\n{cart}", reply_markup=cart_keyboard()
         )
     else:
         update.effective_chat.send_message(
-            f"Ваша корзина пуста",
-            reply_markup=cart_keyboard()
+            f"Ваша корзина пуста", reply_markup=cart_keyboard()
         )
     return "HANDLE_MENU"
 
 
 def handle_payment(update, context):
     """Ввод электронной почты пользователем для подтверждения оплаты."""
-    update.effective_chat.send_message("Введите Вашу электронную почту и мы свяжемся с Вами!")
+    update.effective_chat.send_message(
+        "Введите Вашу электронную почту и мы свяжемся с Вами!"
+    )
     return "WAITING_EMAIL"
 
 
@@ -99,7 +117,7 @@ def handle_users_reply(update, context):
         "HANDLE_DESCRIPTION": handle_description_product,
         "HANDLE_CART": handle_cart,
         "HANDLE_PAYMENT": handle_payment,
-        "WAITING_EMAIL": handle_email
+        "WAITING_EMAIL": handle_email,
     }
 
     chat_id = update.effective_chat.id
@@ -163,7 +181,7 @@ if __name__ == "__main__":
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
-    dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CallbackQueryHandler(handle_menu))
     dispatcher.add_handler(CallbackQueryHandler(handle_description_product))
     dispatcher.add_handler(CallbackQueryHandler(handle_cart))

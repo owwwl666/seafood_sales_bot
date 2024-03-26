@@ -6,9 +6,8 @@ import requests
 def get_name_products(headers: dict) -> dict:
     """Возвращает dict с ключом - id продукта и значением - название продукта."""
     products = requests.get(
-        url="http://localhost:1337/api/products",
-        headers=headers) \
-        .json()["data"]
+        url="http://localhost:1337/api/products", headers=headers
+    ).json()["data"]
     return {product["id"]: product["attributes"]["title"] for product in products}
 
 
@@ -17,16 +16,15 @@ def get_product_by_id(product_id: str, headers: dict) -> dict:
     product = requests.get(
         url=f"http://localhost:1337/api/products/{product_id}",
         headers=headers,
-        params={"populate": "*"}) \
-        .json()["data"]["attributes"]
+        params={"populate": "*"},
+    ).json()["data"]["attributes"]
     return product
 
 
 def get_product_image(product: dict) -> bytes:
     """Получает изображение продукта по его url."""
     image_url = urljoin(
-        "http://localhost:1337",
-        product["image"]["data"][0]["attributes"]["url"]
+        "http://localhost:1337", product["image"]["data"][0]["attributes"]["url"]
     )
     product_image = requests.get(image_url)
     return product_image.content
@@ -38,11 +36,7 @@ def add_new_user(tg_id: str, headers: dict, cart_redis):
         response = requests.post(
             url="http://localhost:1337/api/carts",
             headers=headers,
-            json={
-                "data": {
-                    "tg_id": str(tg_id)
-                }
-            }
+            json={"data": {"tg_id": str(tg_id)}},
         )
         cart_redis.set(tg_id, response.json()["data"]["id"])
 
@@ -54,22 +48,13 @@ def add_product_in_cart(product_id: str, tg_id: str, headers: dict, cart_redis):
     cart_product_id = requests.post(
         url="http://localhost:1337/api/cart-products",
         headers=headers,
-        json={
-            "data": {
-                "product": int(product_id)
-
-            }
-        }
+        json={"data": {"product": int(product_id)}},
     ).json()["data"]["id"]
 
     requests.put(
         url=f"http://localhost:1337/api/carts/{cart_id}",
         headers=headers,
-        json={
-            "data": {
-                "cart_products": {"connect": [cart_product_id]}
-            }
-        }
+        json={"data": {"cart_products": {"connect": [cart_product_id]}}},
     )
 
 
@@ -78,7 +63,10 @@ def get_products_from_cart(tg_id: str, headers: dict) -> str | None:
     response = requests.get(
         url="http://localhost:1337/api/carts",
         headers=headers,
-        params={"filters[tg_id][$eq]": f"{tg_id}", "populate[cart_products][populate][0]": "product"},
+        params={
+            "filters[tg_id][$eq]": f"{tg_id}",
+            "populate[cart_products][populate][0]": "product",
+        },
     ).json()
 
     products = []
@@ -97,11 +85,7 @@ def clean_cart(headers: dict, chat_id, cart_redis):
     requests.put(
         url=f"http://localhost:1337/api/carts/{cart_id}",
         headers=headers,
-        json={
-            "data": {
-                "cart_products": []
-            }
-        }
+        json={"data": {"cart_products": []}},
     )
 
 
@@ -110,9 +94,5 @@ def add_email(strapi_token, cart_id, email):
     requests.put(
         url=f"http://localhost:1337/api/carts/{cart_id}",
         headers={"Authorization": f"bearer {strapi_token}"},
-        json={
-            "data": {
-                "email": email
-            }
-        }
+        json={"data": {"email": email}},
     )
