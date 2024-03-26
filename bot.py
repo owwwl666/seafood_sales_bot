@@ -22,10 +22,10 @@ from strapi import (
     get_product_by_id,
     get_products_from_cart,
     add_email,
-    clean_cart,
     add_product_in_cart,
     get_product_image,
     add_new_user,
+    clean_cart,
 )
 
 
@@ -62,7 +62,7 @@ def handle_description_product(update, context):
         reply_markup=product_description_keyboard(product_id),
     )
 
-    return "HANDLE_MENU"
+    return "HANDLE_CART"
 
 
 def handle_cart(update, context):
@@ -75,9 +75,9 @@ def handle_cart(update, context):
         )
     else:
         update.effective_chat.send_message(
-            f"Ваша корзина пуста", reply_markup=cart_keyboard()
+            "Ваша корзина пуста", reply_markup=cart_keyboard()
         )
-    return "HANDLE_MENU"
+    return "HANDLE_PAYMENT"
 
 
 def handle_payment(update, context):
@@ -95,7 +95,7 @@ def handle_email(update, context):
         cart_id = carts_redis.get(update.effective_chat.id)
         add_email(strapi_token, cart_id, email)
         update.message.reply_text("Спасибо! Скоро с Вами свяжется наш сотрудник!")
-        return "HANDLE_MENU"
+        return "CLOSE"
     else:
         update.message.reply_text("Введите корректные данные")
         return "WAITING_EMAIL"
@@ -131,10 +131,14 @@ def handle_users_reply(update, context):
 
     if user_reply == "/start":
         current_state = "START"
-    elif user_reply == "menu":
-        current_state = "HANDLE_MENU"
     elif user_reply.startswith("product_"):
         current_state = "HANDLE_DESCRIPTION"
+    elif user_reply.startswith("cart_"):
+        product_id = user_reply.split("_")[-1]
+        add_product_in_cart(product_id, chat_id, headers, carts_redis)
+        current_state = "HANDLE_CART"
+    elif user_reply == "menu":
+        current_state = "HANDLE_MENU"
     elif user_reply == "my_cart":
         current_state = "HANDLE_CART"
     elif user_reply == "pay":
@@ -142,14 +146,10 @@ def handle_users_reply(update, context):
     elif user_reply == "clean_cart":
         clean_cart(headers, chat_id, carts_redis)
         current_state = "HANDLE_CART"
-    elif user_reply.startswith("cart_"):
-        product_id = user_reply.split("_")[-1]
-        add_product_in_cart(product_id, chat_id, headers, carts_redis)
-        current_state = "HANDLE_CART"
 
     try:
         next_state = states[current_state](update, context)
-        users_redis.set(chat_id, next_state)
+        user_state_redis.set(chat_id, next_state)
     except Exception as err:
         print(err)
 
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     env = Env()
     env.read_env()
 
-    users_redis = redis.Redis(
+    user_state_redis = redis.Redis(
         host=env.str("HOST", "localhost"),
         port=env.int("PORT", 6379),
         db=env.int("USERS_DB", 1),
