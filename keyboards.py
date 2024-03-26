@@ -23,7 +23,7 @@ def menu_keyboard(products):
     return reply_markup
 
 
-def product_description_keyboard(product_id):
+def product_description_keyboard(product_id: str):
     """Кнопки под описанием продукта."""
     keyboard = [
         [InlineKeyboardButton("В меню", callback_data="menu")],
