@@ -56,3 +56,9 @@ TELEGRAM_BOT_TOKEN=<API TOKEN TELEGRAM BOT'S>
 ```sh
 python bot.py
 ```
+
+# Результат
+
+
+<img src="https://github.com/owwwl666/seafood_sales_bot/assets/131767856/7feb6df7-60be-41cb-94d3-f2ead04f9057" width="400" height="650">
+
