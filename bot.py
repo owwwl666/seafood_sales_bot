@@ -1,3 +1,4 @@
+import logging
 from io import BytesIO
 
 import redis
@@ -6,96 +7,111 @@ from environs import Env
 from telegram.ext import (
     Updater,
     CommandHandler,
-    CallbackQueryHandler,
-    MessageHandler,
-    Filters,
+    CallbackQueryHandler, MessageHandler, Filters,
 )
 
 from keyboards import (
     menu_keyboard,
     product_description_keyboard,
     cart_keyboard,
-    start_keyboard,
 )
 from strapi import (
     get_name_products,
     get_product_by_id,
     get_products_from_cart,
     add_email,
-    add_product_in_cart,
     get_product_image,
-    add_new_user,
-    clean_cart,
+    add_new_user, clean_cart, add_product_in_cart,
 )
 
+logging.basicConfig(format="%(levelname)s::%(message)s", level=logging.ERROR)
+logger = logging.getLogger("logger")
 
-def start(update, context):
+
+def display_menu(update, context, user_reply):
+    """Отображает меню магазина."""
+    products = get_name_products(headers)
+    update.message.reply_text(
+        text="Выеберите, что хотите заказать\n\n",
+        reply_markup=menu_keyboard(products),
+    )
+
+
+def start(update, context, user_reply):
     """Команда запуска бота /start."""
     add_new_user(update.effective_chat.id, headers, carts_redis)
-    update.message.reply_text(
-        "Добро пожаловать в рай морепродуктов!\n\nПерейдите в меню и насладитесь любовью российских морей!",
-        reply_markup=start_keyboard(),
-    )
+    display_menu(update, context, user_reply)
     return "HANDLE_MENU"
 
 
-def handle_menu(update, context):
+def handle_menu(update, context, user_reply):
     """Меню магазина."""
-    products = get_name_products(headers)
-    update.effective_chat.send_message(
-        "Выберите, что хотите заказать:", reply_markup=menu_keyboard(products)
-    )
-    return "HANDLE_DESCRIPTION"
-
-
-def handle_description_product(update, context):
-    """Описание выбранного пользователем продукта из меню."""
-    product_id = update.callback_query.data.split("_")[-1]
-
-    product = get_product_by_id(product_id, headers)
-    product_image = get_product_image(product)
-
-    context.bot.sendPhoto(
-        chat_id=update.effective_chat.id,
-        photo=BytesIO(product_image),
-        caption=product["description"],
-        reply_markup=product_description_keyboard(product_id),
-    )
-
-    return "HANDLE_CART"
-
-
-def handle_cart(update, context):
-    """Корзина пользователя с продуктами."""
-    cart = get_products_from_cart(update.effective_chat.id, headers)
-
-    if cart:
-        update.effective_chat.send_message(
-            f"Ваша корзина:\n\n{cart}", reply_markup=cart_keyboard()
-        )
+    if user_reply == "menu":
+        display_menu(update, context, user_reply)
+    elif user_reply == "my_cart":
+        handle_cart(update, context, user_reply)
+        return "HANDLE_CART"
     else:
-        update.effective_chat.send_message(
-            "Ваша корзина пуста", reply_markup=cart_keyboard()
+        handle_description_product(update, context, user_reply)
+        return "HANDLE_DESCRIPTION"
+
+
+def handle_description_product(update, context, user_reply):
+    """Описание выбранного пользователем продукта из меню."""
+    if user_reply.startswith("product_"):
+        product_id = user_reply.split("_")[-1]
+
+        product = get_product_by_id(product_id, headers)
+        product_image = get_product_image(product)
+
+        context.bot.sendPhoto(
+            chat_id=update.effective_chat.id,
+            photo=BytesIO(product_image),
+            caption=product["description"],
+            reply_markup=product_description_keyboard(product_id),
         )
-    return "HANDLE_PAYMENT"
+    elif user_reply.startswith("cart_"):
+        product_id = user_reply.split("_")[-1]
+        add_product_in_cart(product_id, update.effective_chat.id, headers, carts_redis)
+    elif user_reply == "menu":
+        handle_menu(update, context, user_reply)
+        return "HANDLE_MENU"
+    elif user_reply == "my_cart":
+        handle_cart(update, context, user_reply)
+        return "HANDLE_CART"
 
 
-def handle_payment(update, context):
-    """Ввод электронной почты пользователем для подтверждения оплаты."""
-    update.effective_chat.send_message(
-        "Введите Вашу электронную почту и мы свяжемся с Вами!"
-    )
-    return "WAITING_EMAIL"
+def handle_cart(update, context, user_reply):
+    """Корзина пользователя с продуктами."""
+    if user_reply == "my_cart":
+        cart = get_products_from_cart(update.effective_chat.id, headers)
+
+        if cart:
+            update.effective_chat.send_message(
+                f"Ваша корзина:\n\n{cart}", reply_markup=cart_keyboard()
+            )
+        else:
+            update.effective_chat.send_message(
+                "Ваша корзина пуста", reply_markup=cart_keyboard()
+            )
+    elif user_reply == "menu":
+        handle_menu(update, context, user_reply)
+        return "HANDLE_MENU"
+    elif user_reply == "clean_cart":
+        clean_cart(headers, update.effective_chat.id, carts_redis)
+    else:
+        update.effective_chat.send_message("Введите Вашу электронную почту и мы свяжемся с Вами!")
+        return "WAITING_EMAIL"
 
 
-def handle_email(update, context):
+def handle_email(update, context, user_reply):
     """Проверка электронной почты на валидность."""
     email = update.message.text
     if validate(email):
         cart_id = carts_redis.get(update.effective_chat.id)
         add_email(strapi_token, cart_id, email)
         update.message.reply_text("Спасибо! Скоро с Вами свяжется наш сотрудник!")
-        return "CLOSE"
+        return "START"
     else:
         update.message.reply_text("Введите корректные данные")
         return "WAITING_EMAIL"
@@ -111,19 +127,20 @@ def handle_users_reply(update, context):
     Она получает стейт пользователя из базы данных и запускает соответствующую функцию-обработчик (хэндлер).
     Функция-обработчик возвращает следующее состояние, которое записывается в базу данных.
     """
+
     states = {
         "START": start,
         "HANDLE_MENU": handle_menu,
         "HANDLE_DESCRIPTION": handle_description_product,
         "HANDLE_CART": handle_cart,
-        "HANDLE_PAYMENT": handle_payment,
-        "WAITING_EMAIL": handle_email,
+        "WAITING_EMAIL": handle_email
     }
 
     chat_id = update.effective_chat.id
 
     if update.message:
         user_reply = update.message.text
+
     elif update.callback_query:
         user_reply = update.callback_query.data
     else:
@@ -131,27 +148,14 @@ def handle_users_reply(update, context):
 
     if user_reply == "/start":
         current_state = "START"
-    elif user_reply.startswith("product_"):
-        current_state = "HANDLE_DESCRIPTION"
-    elif user_reply.startswith("cart_"):
-        product_id = user_reply.split("_")[-1]
-        add_product_in_cart(product_id, chat_id, headers, carts_redis)
-        current_state = "HANDLE_CART"
-    elif user_reply == "menu":
-        current_state = "HANDLE_MENU"
-    elif user_reply == "my_cart":
-        current_state = "HANDLE_CART"
-    elif user_reply == "pay":
-        current_state = "HANDLE_PAYMENT"
-    elif user_reply == "clean_cart":
-        clean_cart(headers, chat_id, carts_redis)
-        current_state = "HANDLE_CART"
+    else:
+        current_state = user_state_redis.get(chat_id)
 
     try:
-        next_state = states[current_state](update, context)
+        next_state = states[current_state](update, context, user_reply)
         user_state_redis.set(chat_id, next_state)
-    except Exception as err:
-        print(err)
+    except Exception as error:
+        logger.error(error, exc_info=True)
 
 
 if __name__ == "__main__":
@@ -181,10 +185,6 @@ if __name__ == "__main__":
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CallbackQueryHandler(handle_menu))
-    dispatcher.add_handler(CallbackQueryHandler(handle_description_product))
-    dispatcher.add_handler(CallbackQueryHandler(handle_cart))
-    dispatcher.add_handler(CallbackQueryHandler(handle_payment))
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_email))
+    dispatcher.add_handler(CommandHandler("start", handle_users_reply))
+    dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
     updater.start_polling()
