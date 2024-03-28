@@ -31,7 +31,7 @@ logger = logging.getLogger("logger")
 def display_menu(update, context, user_reply):
     """Отображает меню магазина."""
     products = get_name_products(headers)
-    update.message.reply_text(
+    update.effective_chat.send_message(
         text="Выеберите, что хотите заказать\n\n",
         reply_markup=menu_keyboard(products),
     )
@@ -45,7 +45,11 @@ def start(update, context, user_reply):
 
 
 def handle_menu(update, context, user_reply):
-    """Меню магазина."""
+    """Меню магазина.
+
+    Если пользователь выбрал кнопку 'В меню' - бот отображает меню.
+    Если выбрал кнопку 'Моя корзина' - отображает список товаров в корзине и переводит в состояние 'HANDLE_CART'.
+    Если выбрал товар - отображает описание и переводит в состояние 'HANDLE_DESCRIPTION'."""
     if user_reply == "menu":
         display_menu(update, context, user_reply)
     elif user_reply == "my_cart":
@@ -57,7 +61,12 @@ def handle_menu(update, context, user_reply):
 
 
 def handle_description_product(update, context, user_reply):
-    """Описание выбранного пользователем продукта из меню."""
+    """Описание выбранного пользователем продукта из меню.
+
+    Если выбрал товар - отображает описание и переводит в состояние 'HANDLE_DESCRIPTION'.
+    Если выбрал кнопку 'Добавить в корзину' - добавляет продукт в корзину в CMS Strapi.
+    Если пользователь выбрал кнопку 'В меню' - бот отображает меню.
+    Если выбрал кнопку 'Моя корзина' - отображает список товаров в корзине и переводит в состояние 'HANDLE_CART'."""
     if user_reply.startswith("product_"):
         product_id = user_reply.split("_")[-1]
 
@@ -82,7 +91,12 @@ def handle_description_product(update, context, user_reply):
 
 
 def handle_cart(update, context, user_reply):
-    """Корзина пользователя с продуктами."""
+    """Корзина пользователя с продуктами.
+
+    Если выбрал кнопку 'Моя корзина' - отображает список товаров в корзине и переводит в состояние 'HANDLE_CART'.
+    Если пользователь выбрал кнопку 'В меню' - бот отображает меню.
+    Если выбрал 'Очистить корзину' - удаляет из корзины пользователя все товары.
+    Если выбрал кнопку 'Оплатить' - предлагает ввести email и переводит в состояние 'WAITING_EMAIL'."""
     if user_reply == "my_cart":
         cart = get_products_from_cart(update.effective_chat.id, headers)
 
@@ -105,7 +119,10 @@ def handle_cart(update, context, user_reply):
 
 
 def handle_email(update, context, user_reply):
-    """Проверка электронной почты на валидность."""
+    """Проверка электронной почты на валидность.
+
+    Если почта валидна, то пероводит пользователя в состояние 'START'.
+    Иначе - просит вновь ввести email."""
     email = update.message.text
     if validate(email):
         cart_id = carts_redis.get(update.effective_chat.id)
