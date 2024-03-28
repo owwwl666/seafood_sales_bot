@@ -4,13 +4,13 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 def menu_keyboard(products):
     """Кнопки меню."""
     keyboard = [
-                   [
-                       InlineKeyboardButton(
-                           products[product_id], callback_data=f"product_{product_id}"
-                       )
-                   ]
-                   for product_id in products
-               ] + [[InlineKeyboardButton("Моя корзина", callback_data="my_cart")]]
+        [
+            InlineKeyboardButton(
+                products[product_id], callback_data=f"product_{product_id}"
+            )
+        ]
+        for product_id in products
+    ] + [[InlineKeyboardButton("Моя корзина", callback_data="my_cart")]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     return reply_markup

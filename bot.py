@@ -7,7 +7,9 @@ from environs import Env
 from telegram.ext import (
     Updater,
     CommandHandler,
-    CallbackQueryHandler, MessageHandler, Filters,
+    CallbackQueryHandler,
+    MessageHandler,
+    Filters,
 )
 
 from keyboards import (
@@ -21,7 +23,9 @@ from strapi import (
     get_products_from_cart,
     add_email,
     get_product_image,
-    add_new_user, clean_cart, add_product_in_cart,
+    add_new_user,
+    clean_cart,
+    add_product_in_cart,
 )
 
 logging.basicConfig(format="%(levelname)s::%(message)s", level=logging.ERROR)
@@ -114,7 +118,9 @@ def handle_cart(update, context, user_reply):
     elif user_reply == "clean_cart":
         clean_cart(headers, update.effective_chat.id, carts_redis)
     else:
-        update.effective_chat.send_message("Введите Вашу электронную почту и мы свяжемся с Вами!")
+        update.effective_chat.send_message(
+            "Введите Вашу электронную почту и мы свяжемся с Вами!"
+        )
         return "WAITING_EMAIL"
 
 
@@ -150,7 +156,7 @@ def handle_users_reply(update, context):
         "HANDLE_MENU": handle_menu,
         "HANDLE_DESCRIPTION": handle_description_product,
         "HANDLE_CART": handle_cart,
-        "WAITING_EMAIL": handle_email
+        "WAITING_EMAIL": handle_email,
     }
 
     chat_id = update.effective_chat.id
