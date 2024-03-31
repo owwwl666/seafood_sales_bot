@@ -5,20 +5,23 @@ import requests
 
 def get_name_products(headers: dict) -> dict:
     """Возвращает dict с ключом - id продукта и значением - название продукта."""
-    products = requests.get(
+    response = requests.get(
         url="http://localhost:1337/api/products", headers=headers
-    ).json()["data"]
+    )
+    response.raise_for_status()
+    products = response.json()["data"]
     return {product["id"]: product["attributes"]["title"] for product in products}
 
 
 def get_product_by_id(product_id: str, headers: dict) -> dict:
     """Получает продукт по его id из хранилища Product Strapi."""
-    product = requests.get(
+    response = requests.get(
         url=f"http://localhost:1337/api/products/{product_id}",
         headers=headers,
         params={"populate": "*"},
-    ).json()["data"]["attributes"]
-    return product
+    )
+    response.raise_for_status()
+    return response.json()["data"]["attributes"]
 
 
 def get_product_image(product: dict) -> bytes:
@@ -26,8 +29,9 @@ def get_product_image(product: dict) -> bytes:
     image_url = urljoin(
         "http://localhost:1337", product["image"]["data"][0]["attributes"]["url"]
     )
-    product_image = requests.get(image_url)
-    return product_image.content
+    response = requests.get(image_url)
+    response.raise_for_status()
+    return response.content
 
 
 def add_new_user(tg_id: str, headers: dict, cart_redis):
@@ -38,24 +42,29 @@ def add_new_user(tg_id: str, headers: dict, cart_redis):
             headers=headers,
             json={"data": {"tg_id": str(tg_id)}},
         )
+        response.raise_for_status()
         cart_redis.set(tg_id, response.json()["data"]["id"])
 
 
 def add_product_in_cart(product_id: str, tg_id: str, headers: dict, cart_redis):
-    """Добавляет продукт в корзину (хранилище Cart) пользователя."""
+    """Добавляет продукт в промежуточное хранилище CartProduct,
+    а затем в корзину (хранилище Cart) пользователя."""
     cart_id = cart_redis.get(tg_id)
 
     cart_product_id = requests.post(
         url="http://localhost:1337/api/cart-products",
         headers=headers,
         json={"data": {"product": int(product_id)}},
-    ).json()["data"]["id"]
+    )
 
-    requests.put(
+    cart_updating = requests.put(
         url=f"http://localhost:1337/api/carts/{cart_id}",
         headers=headers,
-        json={"data": {"cart_products": {"connect": [cart_product_id]}}},
+        json={"data": {"cart_products": {"connect": [cart_product_id.json()["data"]["id"]]}}},
     )
+
+    cart_product_id.raise_for_status()
+    cart_updating.raise_for_status()
 
 
 def get_products_from_cart(tg_id: str, headers: dict) -> str | None:
@@ -82,17 +91,19 @@ def clean_cart(headers: dict, chat_id, cart_redis):
     """Очищает корзину (хранилище Cart) пользователя."""
     cart_id = cart_redis.get(chat_id)
 
-    requests.put(
+    response = requests.put(
         url=f"http://localhost:1337/api/carts/{cart_id}",
         headers=headers,
         json={"data": {"cart_products": []}},
     )
+    response.raise_for_status()
 
 
 def add_email(strapi_token, cart_id, email):
     """Добавляет в корзину (хранилище Cart), введенный пользователем email."""
-    requests.put(
+    response = requests.put(
         url=f"http://localhost:1337/api/carts/{cart_id}",
         headers={"Authorization": f"bearer {strapi_token}"},
         json={"data": {"email": email}},
     )
+    response.raise_for_status()
