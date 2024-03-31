@@ -72,7 +72,7 @@ def get_products_from_cart(tg_id: str, headers: dict, url: str) -> str | None:
         url=f"{url}/api/carts",
         headers=headers,
         params={
-            "filters[tg_id][$eq]": f"{tg_id}",
+            "filters[tg_id][$eq]": tg_id,
             "populate[cart_products][populate][0]": "product",
         },
     ).json()
