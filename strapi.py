@@ -34,16 +34,15 @@ def get_product_image(product: dict, url: str) -> bytes:
     return response.content
 
 
-def add_new_user(tg_id: str, headers: dict, cart_redis, url: str):
+def add_new_user(tg_id: str, headers: dict, url: str):
     """Добавляет нового пользователя в хранилище Cart."""
-    if cart_redis.get(tg_id) is None:
-        response = requests.post(
-            url=f"{url}/api/carts",
-            headers=headers,
-            json={"data": {"tg_id": str(tg_id)}},
-        )
-        response.raise_for_status()
-        cart_redis.set(tg_id, response.json()["data"]["id"])
+    response = requests.post(
+        url=f"{url}/api/carts",
+        headers=headers,
+        json={"data": {"tg_id": str(tg_id)}},
+    )
+    response.raise_for_status()
+    return response.json()["data"]["id"]
 
 
 def add_product_in_cart(product_id: str, tg_id: str, headers: dict, cart_redis, url: str):
@@ -87,10 +86,8 @@ def get_products_from_cart(tg_id: str, headers: dict, url: str) -> str | None:
     return "\n".join(products)
 
 
-def clean_cart(headers: dict, chat_id, cart_redis, url: str):
+def clean_cart(headers: dict, cart_id, url: str):
     """Очищает корзину (хранилище Cart) пользователя."""
-    cart_id = cart_redis.get(chat_id)
-
     response = requests.put(
         url=f"{url}/api/carts/{cart_id}",
         headers=headers,

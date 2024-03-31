@@ -34,7 +34,7 @@ logger = logging.getLogger("logger")
 
 def display_menu(update, context, user_reply):
     """Отображает меню магазина."""
-    products = get_name_products(headers,strapi_url)
+    products = get_name_products(headers, strapi_url)
     update.effective_chat.send_message(
         text="Выеберите, что хотите заказать\n\n",
         reply_markup=display_keyboard_menu(products),
@@ -43,7 +43,11 @@ def display_menu(update, context, user_reply):
 
 def start(update, context, user_reply):
     """Команда запуска бота /start."""
-    add_new_user(update.effective_chat.id, headers, carts_redis,strapi_url)
+    tg_id = update.effective_chat.id
+    cart_id = carts_redis.get(tg_id)
+    if cart_id is None:
+        user_id = add_new_user(tg_id, headers, strapi_url)
+        carts_redis.set(tg_id, user_id)
     display_menu(update, context, user_reply)
     return "HANDLE_MENU"
 
@@ -74,8 +78,8 @@ def handle_description_product(update, context, user_reply):
     if user_reply.startswith("product_"):
         product_id = user_reply.split("_")[-1]
 
-        product = get_product_by_id(product_id, headers,strapi_url)
-        product_image = get_product_image(product,strapi_url)
+        product = get_product_by_id(product_id, headers, strapi_url)
+        product_image = get_product_image(product, strapi_url)
 
         context.bot.sendPhoto(
             chat_id=update.effective_chat.id,
@@ -116,7 +120,8 @@ def handle_cart(update, context, user_reply):
         handle_menu(update, context, user_reply)
         return "HANDLE_MENU"
     elif user_reply == "clean_cart":
-        clean_cart(headers, update.effective_chat.id, carts_redis, strapi_url)
+        cart_id = carts_redis.get(update.effective_chat.id)
+        clean_cart(headers, cart_id, strapi_url)
     else:
         update.effective_chat.send_message(
             "Введите Вашу электронную почту и мы свяжемся с Вами!"
