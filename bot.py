@@ -34,7 +34,7 @@ logger = logging.getLogger("logger")
 
 def display_menu(update, context, user_reply):
     """Отображает меню магазина."""
-    products = get_name_products(headers)
+    products = get_name_products(headers,strapi_url)
     update.effective_chat.send_message(
         text="Выеберите, что хотите заказать\n\n",
         reply_markup=display_keyboard_menu(products),
@@ -43,7 +43,7 @@ def display_menu(update, context, user_reply):
 
 def start(update, context, user_reply):
     """Команда запуска бота /start."""
-    add_new_user(update.effective_chat.id, headers, carts_redis)
+    add_new_user(update.effective_chat.id, headers, carts_redis,strapi_url)
     display_menu(update, context, user_reply)
     return "HANDLE_MENU"
 
@@ -74,8 +74,8 @@ def handle_description_product(update, context, user_reply):
     if user_reply.startswith("product_"):
         product_id = user_reply.split("_")[-1]
 
-        product = get_product_by_id(product_id, headers)
-        product_image = get_product_image(product)
+        product = get_product_by_id(product_id, headers,strapi_url)
+        product_image = get_product_image(product,strapi_url)
 
         context.bot.sendPhoto(
             chat_id=update.effective_chat.id,
@@ -85,7 +85,7 @@ def handle_description_product(update, context, user_reply):
         )
     elif user_reply.startswith("cart_"):
         product_id = user_reply.split("_")[-1]
-        add_product_in_cart(product_id, update.effective_chat.id, headers, carts_redis)
+        add_product_in_cart(product_id, update.effective_chat.id, headers, carts_redis, strapi_url)
     elif user_reply == "menu":
         handle_menu(update, context, user_reply)
         return "HANDLE_MENU"
@@ -102,7 +102,7 @@ def handle_cart(update, context, user_reply):
     Если выбрал 'Очистить корзину' - удаляет из корзины пользователя все товары.
     Если выбрал кнопку 'Оплатить' - предлагает ввести email и переводит в состояние 'WAITING_EMAIL'."""
     if user_reply == "my_cart":
-        cart = get_products_from_cart(update.effective_chat.id, headers)
+        cart = get_products_from_cart(update.effective_chat.id, headers, strapi_url)
 
         if cart:
             update.effective_chat.send_message(
@@ -116,7 +116,7 @@ def handle_cart(update, context, user_reply):
         handle_menu(update, context, user_reply)
         return "HANDLE_MENU"
     elif user_reply == "clean_cart":
-        clean_cart(headers, update.effective_chat.id, carts_redis)
+        clean_cart(headers, update.effective_chat.id, carts_redis, strapi_url)
     else:
         update.effective_chat.send_message(
             "Введите Вашу электронную почту и мы свяжемся с Вами!"
@@ -132,7 +132,7 @@ def handle_email(update, context, user_reply):
     email = update.message.text
     if validate(email):
         cart_id = carts_redis.get(update.effective_chat.id)
-        add_email(strapi_token, cart_id, email)
+        add_email(strapi_token, cart_id, email, strapi_url)
         update.message.reply_text("Спасибо! Скоро с Вами свяжется наш сотрудник!")
         return "START"
     else:
@@ -185,6 +185,12 @@ if __name__ == "__main__":
     env = Env()
     env.read_env()
 
+    strapi_token = env.str("STRAPI_TOKEN")
+    strapi_url = env.str("STRAPI_URL")
+    bot_token = env.str("TELEGRAM_BOT_TOKEN")
+
+    headers = {"Authorization": f"bearer {strapi_token}"}
+
     user_state_redis = redis.Redis(
         host=env.str("HOST", "localhost"),
         port=env.int("PORT", 6379),
@@ -201,10 +207,6 @@ if __name__ == "__main__":
         decode_responses=True,
     )
 
-    strapi_token = env.str("STRAPI_TOKEN")
-    headers = {"Authorization": f"bearer {strapi_token}"}
-
-    bot_token = env.str("TELEGRAM_BOT_TOKEN")
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
