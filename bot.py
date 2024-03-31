@@ -13,9 +13,9 @@ from telegram.ext import (
 )
 
 from keyboards import (
-    menu_keyboard,
-    product_description_keyboard,
-    cart_keyboard,
+    display_keyboard_menu,
+    display_keyboard_product_description,
+    display_keyboard_cart,
 )
 from strapi import (
     get_name_products,
@@ -37,7 +37,7 @@ def display_menu(update, context, user_reply):
     products = get_name_products(headers)
     update.effective_chat.send_message(
         text="Выеберите, что хотите заказать\n\n",
-        reply_markup=menu_keyboard(products),
+        reply_markup=display_keyboard_menu(products),
     )
 
 
@@ -81,7 +81,7 @@ def handle_description_product(update, context, user_reply):
             chat_id=update.effective_chat.id,
             photo=BytesIO(product_image),
             caption=product["description"],
-            reply_markup=product_description_keyboard(product_id),
+            reply_markup=display_keyboard_product_description(product_id),
         )
     elif user_reply.startswith("cart_"):
         product_id = user_reply.split("_")[-1]
@@ -106,11 +106,11 @@ def handle_cart(update, context, user_reply):
 
         if cart:
             update.effective_chat.send_message(
-                f"Ваша корзина:\n\n{cart}", reply_markup=cart_keyboard()
+                f"Ваша корзина:\n\n{cart}", reply_markup=display_keyboard_cart()
             )
         else:
             update.effective_chat.send_message(
-                "Ваша корзина пуста", reply_markup=cart_keyboard()
+                "Ваша корзина пуста", reply_markup=display_keyboard_cart()
             )
     elif user_reply == "menu":
         handle_menu(update, context, user_reply)

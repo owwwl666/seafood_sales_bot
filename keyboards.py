@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-def menu_keyboard(products):
+def display_keyboard_menu(products):
     """Кнопки меню."""
     keyboard = [
         [
@@ -16,7 +16,7 @@ def menu_keyboard(products):
     return reply_markup
 
 
-def product_description_keyboard(product_id: str):
+def display_keyboard_product_description(product_id: str):
     """Кнопки под описанием продукта."""
     keyboard = [
         [InlineKeyboardButton("В меню", callback_data="menu")],
@@ -31,7 +31,7 @@ def product_description_keyboard(product_id: str):
     return reply_markup
 
 
-def cart_keyboard():
+def display_keyboard_cart():
     """Кнопки в корзине пользователя."""
     keyboard = [
         [InlineKeyboardButton("В меню", callback_data="menu")],
