@@ -28,7 +28,6 @@ from strapi import (
     add_product_in_cart,
 )
 
-logging.basicConfig(format="%(levelname)s::%(message)s", level=logging.ERROR)
 logger = logging.getLogger("logger")
 
 
@@ -187,6 +186,8 @@ def handle_users_reply(update, context):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(format="%(levelname)s::%(message)s", level=logging.ERROR)
+
     env = Env()
     env.read_env()
 
