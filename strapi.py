@@ -96,11 +96,11 @@ def clean_cart(headers: dict, cart_id, url: str):
     response.raise_for_status()
 
 
-def add_email(strapi_token: str, cart_id: int, email: str, url: str):
+def add_email(headers: dict, cart_id: int, email: str, url: str):
     """Добавляет в корзину (хранилище Cart), введенный пользователем email."""
     response = requests.put(
         url=f"{url}/api/carts/{cart_id}",
-        headers={"Authorization": f"bearer {strapi_token}"},
+        headers=headers,
         json={"data": {"email": email}},
     )
     response.raise_for_status()
