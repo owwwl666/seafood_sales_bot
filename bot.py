@@ -13,11 +13,18 @@ from telegram.ext import (
 )
 
 from keyboards import (
-    display_keyboard_menu, display_keyboard_product_description, display_keyboard_cart,
+    display_keyboard_menu,
+    display_keyboard_product_description,
+    display_keyboard_cart,
 )
 from strapi import (
     get_name_products,
-    add_new_user, get_product_by_id, get_product_image, add_product_in_cart, get_products_from_cart, clean_cart,
+    add_new_user,
+    get_product_by_id,
+    get_product_image,
+    add_product_in_cart,
+    get_products_from_cart,
+    clean_cart,
     add_email,
 )
 
@@ -85,7 +92,13 @@ class Handler:
             )
         elif user_reply.startswith("cart_"):
             product_id = user_reply.split("_")[-1]
-            add_product_in_cart(product_id, update.effective_chat.id, self.headers, self.carts_redis, self.strapi_url)
+            add_product_in_cart(
+                product_id,
+                update.effective_chat.id,
+                self.headers,
+                self.carts_redis,
+                self.strapi_url,
+            )
         elif user_reply == "menu":
             self.handle_menu(update, context, user_reply)
             return "HANDLE_MENU"
@@ -101,7 +114,9 @@ class Handler:
         Если выбрал 'Очистить корзину' - удаляет из корзины пользователя все товары.
         Если выбрал кнопку 'Оплатить' - предлагает ввести email и переводит в состояние 'WAITING_EMAIL'."""
         if user_reply == "my_cart":
-            cart = get_products_from_cart(update.effective_chat.id, self.headers, self.strapi_url)
+            cart = get_products_from_cart(
+                update.effective_chat.id, self.headers, self.strapi_url
+            )
 
             if cart:
                 update.effective_chat.send_message(
@@ -210,7 +225,7 @@ def main():
         strapi_url=strapi_url,
         headers=headers,
         user_state_redis=user_state_redis,
-        carts_redis=carts_redis
+        carts_redis=carts_redis,
     )
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
