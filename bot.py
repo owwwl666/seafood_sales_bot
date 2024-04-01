@@ -78,6 +78,7 @@ class Handler:
         Если выбрал кнопку 'Добавить в корзину' - добавляет продукт в корзину в CMS Strapi.
         Если пользователь выбрал кнопку 'В меню' - бот отображает меню.
         Если выбрал кнопку 'Моя корзина' - отображает список товаров в корзине и переводит в состояние 'HANDLE_CART'."""
+        tg_id = update.effective_chat.id
         if user_reply.startswith("product_"):
             product_id = user_reply.split("_")[-1]
 
@@ -85,18 +86,18 @@ class Handler:
             product_image = get_product_image(product, self.strapi_url)
 
             context.bot.sendPhoto(
-                chat_id=update.effective_chat.id,
+                chat_id=tg_id,
                 photo=BytesIO(product_image),
                 caption=product["description"],
                 reply_markup=display_keyboard_product_description(product_id),
             )
         elif user_reply.startswith("cart_"):
             product_id = user_reply.split("_")[-1]
+            cart_id = self.carts_redis.get(tg_id)
             add_product_in_cart(
                 product_id,
-                update.effective_chat.id,
                 self.headers,
-                self.carts_redis,
+                cart_id,
                 self.strapi_url,
             )
         elif user_reply == "menu":

@@ -41,13 +41,9 @@ def add_new_user(tg_id: str, headers: dict, url: str):
     return response.json()["data"]["id"]
 
 
-def add_product_in_cart(
-    product_id: str, tg_id: str, headers: dict, cart_redis, url: str
-):
+def add_product_in_cart(product_id: str, headers: dict, cart_id: int, url: str):
     """Добавляет продукт в промежуточное хранилище CartProduct,
     а затем в корзину (хранилище Cart) пользователя."""
-    cart_id = cart_redis.get(tg_id)
-
     cart_product_id = requests.post(
         url=f"{url}/api/cart-products",
         headers=headers,
