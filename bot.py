@@ -46,17 +46,16 @@ class Handler:
             reply_markup=display_keyboard_menu(products),
         )
 
-    def start(self, update, context, user_reply):
+    def start(self, update, context, _, chat_id):
         """Команда запуска бота /start."""
-        tg_id = update.effective_chat.id
-        cart_id = self.carts_redis.get(tg_id)
+        cart_id = self.carts_redis.get(chat_id)
         if cart_id is None:
-            user_id = add_new_user(tg_id, self.headers, self.strapi_url)
-            self.carts_redis.set(tg_id, user_id)
+            user_cart_id = add_new_user(chat_id, self.headers, self.strapi_url)
+            self.carts_redis.set(chat_id, user_cart_id)
         self.display_menu(update, context)
         return "HANDLE_MENU"
 
-    def handle_menu(self, update, context, user_reply):
+    def handle_menu(self, update, context, user_reply, chat_id):
         """Меню магазина.
 
         Если пользователь выбрал кнопку 'В меню' - бот отображает меню.
@@ -65,20 +64,19 @@ class Handler:
         if user_reply == "menu":
             self.display_menu(update, context)
         elif user_reply == "my_cart":
-            self.handle_cart(update, context, user_reply)
+            self.handle_cart(update, context, user_reply, chat_id)
             return "HANDLE_CART"
         else:
-            self.handle_description_product(update, context, user_reply)
+            self.handle_description_product(update, context, user_reply, chat_id)
             return "HANDLE_DESCRIPTION"
 
-    def handle_description_product(self, update, context, user_reply):
+    def handle_description_product(self, update, context, user_reply, chat_id):
         """Описание выбранного пользователем продукта из меню.
 
         Если выбрал товар - отображает описание и переводит в состояние 'HANDLE_DESCRIPTION'.
         Если выбрал кнопку 'Добавить в корзину' - добавляет продукт в корзину в CMS Strapi.
         Если пользователь выбрал кнопку 'В меню' - бот отображает меню.
         Если выбрал кнопку 'Моя корзина' - отображает список товаров в корзине и переводит в состояние 'HANDLE_CART'."""
-        tg_id = update.effective_chat.id
         if user_reply.startswith("product_"):
             product_id = user_reply.split("_")[-1]
 
@@ -86,14 +84,14 @@ class Handler:
             product_image = get_product_image(product, self.strapi_url)
 
             context.bot.sendPhoto(
-                chat_id=tg_id,
+                chat_id=chat_id,
                 photo=BytesIO(product_image),
                 caption=product["description"],
                 reply_markup=display_keyboard_product_description(product_id),
             )
         elif user_reply.startswith("cart_"):
             product_id = user_reply.split("_")[-1]
-            cart_id = self.carts_redis.get(tg_id)
+            cart_id = self.carts_redis.get(chat_id)
             add_product_in_cart(
                 product_id,
                 self.headers,
@@ -101,13 +99,13 @@ class Handler:
                 self.strapi_url,
             )
         elif user_reply == "menu":
-            self.handle_menu(update, context, user_reply)
+            self.handle_menu(update, context, user_reply, chat_id)
             return "HANDLE_MENU"
         elif user_reply == "my_cart":
-            self.handle_cart(update, context, user_reply)
+            self.handle_cart(update, context, user_reply, chat_id)
             return "HANDLE_CART"
 
-    def handle_cart(self, update, context, user_reply):
+    def handle_cart(self, update, context, user_reply, chat_id):
         """Корзина пользователя с продуктами.
 
         Если выбрал кнопку 'Моя корзина' - отображает список товаров в корзине и переводит в состояние 'HANDLE_CART'.
@@ -115,9 +113,7 @@ class Handler:
         Если выбрал 'Очистить корзину' - удаляет из корзины пользователя все товары.
         Если выбрал кнопку 'Оплатить' - предлагает ввести email и переводит в состояние 'WAITING_EMAIL'."""
         if user_reply == "my_cart":
-            cart = get_products_from_cart(
-                update.effective_chat.id, self.headers, self.strapi_url
-            )
+            cart = get_products_from_cart(chat_id, self.headers, self.strapi_url)
 
             if cart:
                 update.effective_chat.send_message(
@@ -128,10 +124,10 @@ class Handler:
                     "Ваша корзина пуста", reply_markup=display_keyboard_cart()
                 )
         elif user_reply == "menu":
-            self.handle_menu(update, context, user_reply)
+            self.handle_menu(update, context, user_reply, chat_id)
             return "HANDLE_MENU"
         elif user_reply == "clean_cart":
-            cart_id = self.carts_redis.get(update.effective_chat.id)
+            cart_id = self.carts_redis.get(chat_id)
             clean_cart(self.headers, cart_id, self.strapi_url)
         else:
             update.effective_chat.send_message(
@@ -139,14 +135,14 @@ class Handler:
             )
             return "WAITING_EMAIL"
 
-    def handle_email(self, update, context, user_reply):
+    def handle_email(self, update, context, user_reply, chat_id):
         """Проверка электронной почты на валидность.
 
         Если почта валидна, то пероводит пользователя в состояние 'START'.
         Иначе - просит вновь ввести email."""
         email = update.message.text
         if validate(email):
-            cart_id = self.carts_redis.get(update.effective_chat.id)
+            cart_id = self.carts_redis.get(chat_id)
             add_email(self.headers, cart_id, email, self.strapi_url)
             update.message.reply_text("Спасибо! Скоро с Вами свяжется наш сотрудник!")
             return "START"
@@ -188,7 +184,7 @@ class Handler:
             current_state = self.user_state_redis.get(chat_id)
 
         try:
-            next_state = states[current_state](update, context, user_reply)
+            next_state = states[current_state](update, context, user_reply, chat_id)
             self.user_state_redis.set(chat_id, next_state)
         except Exception as error:
             logger.error(error, exc_info=True)
