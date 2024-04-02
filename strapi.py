@@ -74,6 +74,7 @@ def get_products_from_cart(tg_id: str, headers: dict, url: str) -> str | None:
             "populate[cart_products][populate][0]": "product",
         },
     ).json()
+    response.raise_for_status()
 
     products = []
     cart = response["data"][0]["attributes"]["cart_products"]["data"]
