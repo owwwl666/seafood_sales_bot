@@ -50,6 +50,8 @@ def add_product_in_cart(product_id: str, headers: dict, cart_id: int, url: str):
         json={"data": {"product": int(product_id)}},
     )
 
+    cart_product_id.raise_for_status()
+
     cart_updating = requests.put(
         url=f"{url}/api/carts/{cart_id}",
         headers=headers,
@@ -59,8 +61,6 @@ def add_product_in_cart(product_id: str, headers: dict, cart_id: int, url: str):
             }
         },
     )
-
-    cart_product_id.raise_for_status()
     cart_updating.raise_for_status()
 
 
