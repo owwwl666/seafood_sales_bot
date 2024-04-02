@@ -73,11 +73,11 @@ def get_products_from_cart(tg_id: str, headers: dict, url: str) -> str | None:
             "filters[tg_id][$eq]": tg_id,
             "populate[cart_products][populate][0]": "product",
         },
-    ).json()
+    )
     response.raise_for_status()
 
     products = []
-    cart = response["data"][0]["attributes"]["cart_products"]["data"]
+    cart = response.json()["data"][0]["attributes"]["cart_products"]["data"]
 
     for product in cart:
         product_title = product["attributes"]["product"]["data"]["attributes"]["title"]
