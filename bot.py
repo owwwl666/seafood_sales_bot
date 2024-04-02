@@ -31,7 +31,7 @@ from strapi import (
 logger = logging.getLogger("logger")
 
 
-class Handler:
+class Bot:
     def __init__(self, strapi_url, headers, user_state_redis, carts_redis):
         self.strapi_url = strapi_url
         self.headers = headers
@@ -218,7 +218,7 @@ def main():
         decode_responses=True,
     )
 
-    handler = Handler(
+    handler = Bot(
         strapi_url=strapi_url,
         headers=headers,
         user_state_redis=user_state_redis,
