@@ -31,7 +31,7 @@ from strapi import (
 logger = logging.getLogger("logger")
 
 
-class Bot:
+class TelegramBot:
     def __init__(self, strapi_url, headers, user_state_redis, carts_redis):
         self.strapi_url = strapi_url
         self.headers = headers
@@ -218,7 +218,7 @@ def main():
         decode_responses=True,
     )
 
-    handler = Bot(
+    telegram_bot = TelegramBot(
         strapi_url=strapi_url,
         headers=headers,
         user_state_redis=user_state_redis,
@@ -226,9 +226,9 @@ def main():
     )
     updater = Updater(bot_token)
     dispatcher = updater.dispatcher
-    dispatcher.add_handler(CallbackQueryHandler(handler.handle_users_reply))
-    dispatcher.add_handler(CommandHandler("start", handler.handle_users_reply))
-    dispatcher.add_handler(MessageHandler(Filters.text, handler.handle_users_reply))
+    dispatcher.add_handler(CallbackQueryHandler(telegram_bot.handle_users_reply))
+    dispatcher.add_handler(CommandHandler("start", telegram_bot.handle_users_reply))
+    dispatcher.add_handler(MessageHandler(Filters.text, telegram_bot.handle_users_reply))
     updater.start_polling()
 
 
